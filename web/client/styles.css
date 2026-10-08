@@ -1,0 +1,6 @@
+/* Page-specific styles; tokens, header and footer come from the arshkumar.com kit. */
+.wrap { max-width: 860px; margin: 0 auto; padding: 96px 16px 64px; }
+h1 { font-size: clamp(32px, 6vw, 56px); line-height: 1.05; letter-spacing: -0.02em; margin: 24px 0 16px; }
+h1 em { font-family: "Instrument Serif", serif; font-weight: 400; }
+.lede { font-size: 18px; opacity: 0.8; }
+.disclaimer { font-size: 14px; padding: 10px 14px; border: 1px solid currentColor; border-radius: 8px; opacity: 0.85; }

@@ -1,0 +1,32 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "contract-scanner",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  // Static client (built by Vite) is served without invoking the Worker, so page loads cost no CPU and no log events.
+  "assets": { "not_found_handling": "single-page-application", "run_worker_first": ["/api/*"] },
+
+  // Workers AI. No AI Gateway: its logs are on by default and would store prompts.
+  "ai": { "binding": "AI", "remote": true },
+
+  // Per-IP burst limit. Approximate and per-location by design (period must be 10 or 60 s):
+  // https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/
+  "ratelimits": [{ "name": "RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 30, "period": 60 } }],
+
+  // Exact daily neuron budget: one SQLite-backed Durable Object (available on Workers Free).
+  // https://developers.cloudflare.com/durable-objects/platform/pricing/
+  "durable_objects": { "bindings": [{ "name": "NEURON_BUDGET", "class_name": "NeuronBudget" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["NeuronBudget"] }],
+
+  // Workers Logs: one summary line per API request (src/log.ts); invocation logs off to halve event count.
+  // Free: 200k events/day, 3-day retention; from 2026-12-01, 0.5 GB/day ingest.
+  // https://developers.cloudflare.com/workers/observability/logs/workers-logs/
+  "observability": { "enabled": true, "logs": { "invocation_logs": false } },
+
+  "vars": {
+    "MODEL_ID": "@cf/qwen/qwen3-30b-a3b-fp8",
+    "LORA_ID": "", // empty = base model; set after Phase 5
+    "DAILY_NEURON_CAP": "7000" // the 10k/day free allocation is per account, shared with search.arshkumar.com
+  }
+}
