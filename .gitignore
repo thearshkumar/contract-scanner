@@ -1,0 +1,17 @@
+# secrets
+.env
+.dev.vars
+# node / wrangler
+node_modules/
+.wrangler/
+dist/
+# python
+__pycache__/
+.venv/
+.pytest_cache/
+.ruff_cache/
+# data and model artifacts (never committed)
+data/
+out/
+*.safetensors
+.DS_Store
