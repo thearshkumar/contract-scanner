@@ -1,0 +1,28 @@
+[project]
+name = "contract-scanner-ml"
+version = "0.1.0"
+description = "Eval and LoRA training pipeline for the Contract Risk Scanner (see THIRD_PARTY_LICENSES.md)"
+requires-python = ">=3.11"  # Colab and Modal images run 3.11/3.12
+dependencies = []
+
+[project.optional-dependencies]
+# Installed only on GPU boxes (Modal H100, Colab). Not needed for tests.
+train = ["transformers>=5.10", "peft>=0.21", "trl>=1.15", "huggingface_hub", "modal>=1.6"]
+eval = ["vllm>=0.31", "huggingface_hub"]
+
+[dependency-groups]
+dev = ["pytest>=9.1", "ruff>=0.16"]
+
+[tool.uv]
+package = false
+# train and eval run in separate GPU images; vllm pins an older transformers than trl needs.
+conflicts = [[{ extra = "train" }, { extra = "eval" }]]
+environments = ["sys_platform == 'darwin'", "sys_platform == 'linux' and platform_machine == 'x86_64'"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["shared", "eval", "model"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
