@@ -1,21 +1,43 @@
-"""LoRA spike: does a Qwen3-30B-A3B adapter load and take effect on Workers AI (@cf/qwen/qwen3-30b-a3b-fp8)?
+"""LoRA spike: does an adapter trained here load and take effect on Workers AI?
 
 Trains a tiny attention-only adapter on a *sentinel* task (always reply `{"__spike": true}`), checks the effect
 offline, and saves it in the exact layout Workers AI expects. The upload + live check is done locally with wrangler
 (see docs/spike-lora.md).
 
-    uv run --no-project --with modal==1.6.1 modal run model/spike.py            # download (cached) + train r=8,32
-    uv run --no-project --with modal==1.6.1 modal volume get cs-adapters spike out/
+    uv run --no-project --with modal==1.6.1 modal run --detach model/spike.py --base llama-3.2-3b
+    uv run --no-project --with modal==1.6.1 modal volume get --force cs-adapters spike out/
 
-Costs (Modal, 2026-10): download on CPU ~10 min; H100 ~15-20 min (~$1-1.5).
+Results so far: docs/spike-lora.md (Qwen3-30B-A3B trains fine but Workers AI rejects it for finetunes).
+Gated bases (Llama) read HF_TOKEN from the Modal secret `huggingface`.
 """
 
 from __future__ import annotations
 
 import modal
 
-BASE = "Qwen/Qwen3-30B-A3B"
-REVISION = "ad44e777bcd18fa416d9da3bd8f70d33ebb85d39"  # pinned for reproducibility
+# Each base: HF repo + pinned revision, Workers AI model, adapter model_type, GPU, and the exact prompt template
+# (written out, not apply_chat_template, so training matches the `raw: true` prompt sent to Workers AI).
+BASES = {
+    "qwen3-30b-a3b": {
+        "repo": "Qwen/Qwen3-30B-A3B",
+        "revision": "ad44e777bcd18fa416d9da3bd8f70d33ebb85d39",
+        "cf_model": "@cf/qwen/qwen3-30b-a3b-fp8",
+        "model_type": "qwen3_moe",
+        "gpu": "H100",
+        "template": "<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n",
+        "eos": "<|im_end|>",
+    },
+    "llama-3.2-3b": {
+        "repo": "meta-llama/Llama-3.2-3B-Instruct",
+        "revision": "0cb88a4f764b7a12671c53f0838cd831a0843b95",
+        "cf_model": "@cf/meta/llama-3.2-3b-instruct",
+        "model_type": "llama",
+        "gpu": "L4",
+        "template": "<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\n{prompt}<|eot_id|>"
+        "<|start_header_id|>assistant<|end_header_id|>\n\n",
+        "eos": "<|eot_id|>",
+    },
+}
 SENTINEL = '{"__spike": true}'
 
 app = modal.App("contract-scanner-spike")
@@ -55,17 +77,20 @@ HELD_OUT = [
 ]
 
 
-@app.function(image=image, volumes={"/cache": hf_cache}, cpu=8, memory=16384, timeout=3600)
-def download() -> str:
+hf_secret = modal.Secret.from_name("huggingface", required_keys=["HF_TOKEN"])
+
+
+@app.function(image=image, volumes={"/cache": hf_cache}, secrets=[hf_secret], cpu=8, memory=16384, timeout=3600)
+def download(base: str) -> str:
     from huggingface_hub import snapshot_download
 
-    path = snapshot_download(BASE, revision=REVISION)
+    b = BASES[base]
+    path = snapshot_download(b["repo"], revision=b["revision"], allow_patterns=["*.json", "*.safetensors", "*.model"])
     hf_cache.commit()
     return path
 
 
-@app.function(image=image, gpu="H100", volumes={"/cache": hf_cache, "/out": adapters}, timeout=3600)
-def train_sentinel(ranks: list[int], steps: int = 40) -> list[dict]:
+def _train_sentinel(base: str, ranks: list[int], steps: int) -> list[dict]:
     import json
     import logging
     import os
@@ -79,20 +104,20 @@ def train_sentinel(ranks: list[int], steps: int = 40) -> list[dict]:
 
     setup()
     log = logging.getLogger("spike")
-    tok = AutoTokenizer.from_pretrained(BASE, revision=REVISION)
+    b = BASES[base]
+    tok = AutoTokenizer.from_pretrained(b["repo"], revision=b["revision"])
     t0 = time.time()
-    base = AutoModelForCausalLM.from_pretrained(BASE, revision=REVISION, dtype=torch.bfloat16, device_map="cuda")
+    model_base = AutoModelForCausalLM.from_pretrained(
+        b["repo"], revision=b["revision"], dtype=torch.bfloat16, device_map="cuda"
+    )
     log.info("loaded", extra={"secs": round(time.time() - t0), "gpu_mem_gb": round(torch.cuda.memory_allocated() / 1e9, 1)})
 
     def prompt(text: str) -> str:
-        # Thinking off: the same template Workers AI should get via raw=true (see docs/spike-lora.md).
-        return tok.apply_chat_template(
-            [{"role": "user", "content": text}], tokenize=False, add_generation_prompt=True, enable_thinking=False
-        )
+        return b["template"].format(prompt=text)
 
     def example(text: str) -> dict:
         p = tok(prompt(text), add_special_tokens=False)["input_ids"]
-        a = tok(SENTINEL + "<|im_end|>", add_special_tokens=False)["input_ids"]
+        a = tok(SENTINEL + b["eos"], add_special_tokens=False)["input_ids"]
         return {"input_ids": p + a, "labels": [-100] * len(p) + a}
 
     data = [example(t) for t in TRAIN_PROMPTS]
@@ -112,13 +137,12 @@ def train_sentinel(ranks: list[int], steps: int = 40) -> list[dict]:
         return tok.decode(out[0, enc["input_ids"].shape[1] :], skip_special_tokens=True)
 
     results = []
-    model = base
     for rank in ranks:
         cfg = LoraConfig(
             r=rank, lora_alpha=2 * rank, lora_dropout=0.0, bias="none", task_type="CAUSAL_LM",
             target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],  # attention only; experts untouched
         )
-        model = get_peft_model(base, cfg)
+        model = get_peft_model(model_base, cfg)
         model.gradient_checkpointing_enable()
         model.enable_input_require_grads()
         opt = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=2e-4)
@@ -137,14 +161,13 @@ def train_sentinel(ranks: list[int], steps: int = 40) -> list[dict]:
         with model.disable_adapter():
             without = [generate(model, t) for t in HELD_OUT]
 
-        out_dir = f"/out/spike/r{rank}"
+        out_dir = f"/out/spike/{base}/r{rank}"
         model.save_pretrained(out_dir, safe_serialization=True)
-        # Workers AI requires model_type; the docs only list mistral|gemma|llama. We record the HF one here and
-        # try alternatives at upload time.
+        # Workers AI requires model_type (docs list mistral|gemma|llama).
         cfg_path = os.path.join(out_dir, "adapter_config.json")
         with open(cfg_path) as f:
             ac = json.load(f)
-        ac["model_type"] = "qwen3_moe"
+        ac["model_type"] = b["model_type"]
         with open(cfg_path, "w") as f:
             json.dump(ac, f, indent=2)
         size_mb = os.path.getsize(os.path.join(out_dir, "adapter_model.safetensors")) / 1e6
@@ -160,15 +183,29 @@ def train_sentinel(ranks: list[int], steps: int = 40) -> list[dict]:
         }
         log.info("result", extra=r)
         results.append(r)
-        base = model.unload()  # strip the LoRA layers before the next rank
+        model_base = model.unload()  # strip the LoRA layers before the next rank
     adapters.commit()
     return results
 
 
+_gpu_kw = {"image": image, "volumes": {"/cache": hf_cache, "/out": adapters}, "secrets": [hf_secret], "timeout": 3600}
+
+
+@app.function(gpu="H100", **_gpu_kw)
+def train_sentinel_h100(base: str, ranks: list[int], steps: int = 40) -> list[dict]:
+    return _train_sentinel(base, ranks, steps)
+
+
+@app.function(gpu="L4", **_gpu_kw)
+def train_sentinel_l4(base: str, ranks: list[int], steps: int = 40) -> list[dict]:
+    return _train_sentinel(base, ranks, steps)
+
+
 @app.local_entrypoint()
-def main(ranks: str = "8,32", steps: int = 40) -> None:
+def main(base: str = "llama-3.2-3b", ranks: str = "8,32", steps: int = 40) -> None:
     import json
 
-    print("weights:", download.remote())
-    res = train_sentinel.remote([int(r) for r in ranks.split(",")], steps)
+    print("weights:", download.remote(base))
+    train = train_sentinel_h100 if BASES[base]["gpu"] == "H100" else train_sentinel_l4
+    res = train.remote(base, [int(r) for r in ranks.split(",")], steps)
     print(json.dumps(res, indent=2))

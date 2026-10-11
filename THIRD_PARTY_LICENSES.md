@@ -47,11 +47,20 @@ Not used: Unsloth Studio (AGPL-3.0). Unsloth core (Apache-2.0) only if it suppor
 
 | Model | Licence | Use | Compliant? | Status |
 |---|---|---|---|---|
-| Qwen/Qwen3-30B-A3B (HF) | Apache-2.0 | LoRA training base | yes | approved |
+| Qwen/Qwen3-30B-A3B (HF) | Apache-2.0 | spike only (Workers AI does not accept it for finetunes) | yes | used in spike |
 | Qwen/Qwen3-30B-A3B-FP8 (HF) | Apache-2.0 | offline eval (matches Workers AI fp8 serving) | yes | approved |
 | @cf/qwen/qwen3-30b-a3b-fp8 (Workers AI) | Apache-2.0 upstream; Cloudflare service terms | live clause detection + Q&A | yes | approved |
 | Qwen/Qwen3-0.6B (HF) | to check before use | cheap pipeline dry-runs on Colab | — | not yet checked |
+| meta-llama/Llama-3.2-3B-Instruct (HF, gated) | ⚠ Llama 3.2 Community License (custom) | **chosen base** for LoRA training | yes, with conditions below | approved 2026-10-11 |
+| @cf/meta/llama-3.2-3b-instruct (Workers AI) | Llama 3.2 Community License; Cloudflare service terms | live clause detection + Q&A with the adapter | yes | approved 2026-10-11 |
 | @cf/baai/bge-m3 (Workers AI) | MIT upstream | embeddings | yes | approved |
+
+### Llama 3.2 conditions we follow
+
+- Show "Built with Llama" on the site and in the README; include a copy of the licence with anything we distribute.
+- The published adapter's name starts with "Llama" (e.g. `Llama-3.2-3B-contract-scanner-lora`) and its model card
+  carries the licence and Meta's Acceptable Use Policy.
+- No use that the Acceptable Use Policy prohibits; the 700M monthly-active-user clause does not apply.
 
 ## Datasets
 
