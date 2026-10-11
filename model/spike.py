@@ -37,6 +37,16 @@ BASES = {
         "<|start_header_id|>assistant<|end_header_id|>\n\n",
         "eos": "<|eot_id|>",
     },
+    # Control: the base Cloudflare documents for BYO LoRA.
+    "mistral-7b-v0.2": {
+        "repo": "mistralai/Mistral-7B-Instruct-v0.2",
+        "revision": "63a8b081895390a26e140280378bc85ec8bce07a",
+        "cf_model": "@cf/mistral/mistral-7b-instruct-v0.2-lora",
+        "model_type": "mistral",
+        "gpu": "L40S",
+        "template": "<s>[INST] {prompt} [/INST]",
+        "eos": "</s>",
+    },
 }
 SENTINEL = '{"__spike": true}'
 
@@ -201,11 +211,16 @@ def train_sentinel_l4(base: str, ranks: list[int], steps: int = 40) -> list[dict
     return _train_sentinel(base, ranks, steps)
 
 
+@app.function(gpu="L40S", **_gpu_kw)
+def train_sentinel_l40s(base: str, ranks: list[int], steps: int = 40) -> list[dict]:
+    return _train_sentinel(base, ranks, steps)
+
+
 @app.local_entrypoint()
 def main(base: str = "llama-3.2-3b", ranks: str = "8,32", steps: int = 40) -> None:
     import json
 
     print("weights:", download.remote(base))
-    train = train_sentinel_h100 if BASES[base]["gpu"] == "H100" else train_sentinel_l4
+    train = {"H100": train_sentinel_h100, "L4": train_sentinel_l4, "L40S": train_sentinel_l40s}[BASES[base]["gpu"]]
     res = train.remote(base, [int(r) for r in ranks.split(",")], steps)
     print(json.dumps(res, indent=2))

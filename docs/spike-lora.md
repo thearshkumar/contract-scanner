@@ -53,3 +53,34 @@ checked per base with the sentinel test.
 
 Housekeeping: the probes left empty `probe-*` finetunes (the OAuth token from `wrangler login` gets 403 on delete).
 They count toward the 100-adapter limit; delete them in the dashboard or with an API token that has Workers AI edit.
+
+## Round 2: Llama 3.2 3B (2026-10-11)
+
+Same sentinel method, `model/spike.py --base llama-3.2-3b` on a Modal L4 (training took about 20 s per rank).
+
+**Offline: pass.** r=8 (18.4 MB) and r=32 (73.4 MB): sentinel 5/5 with the adapter, 0/5 without.
+
+**Upload: pass.** `wrangler ai finetune create @cf/meta/llama-3.2-3b-instruct ...` accepts both ranks with
+`model_type: "llama"`.
+
+**Live serving: works, but unreliably.**
+
+| Adapter | Calls | 200 OK | of which sentinel | 500 Internal server error |
+|---|---|---|---|---|
+| `llama-spike-r8` (Llama 3.2 3B) | 20 | 5 | **5/5** | 15 |
+| `llama-spike-r32` (Llama 3.2 3B) | 20 | 0 | – | 18 (+2 other) |
+| `mistral-spike-r8-raw` (control: documented Mistral base) | 20 | 5 | **5/5** | 15 |
+| `llama-spike-r8`, calls spaced 3 s apart | 12 | 1 | 1/1 | 11 |
+| base model, no adapter | 10 | 10 | 0/10 | 0 |
+
+- Every successful adapter call returned the sentinel, so the adapter is applied and our training and export are correct.
+- About 75% of adapter calls fail with a 500, on the **documented Mistral base too**. That rules out our files as the
+  cause: it's Cloudflare's LoRA serving (open beta). Spacing calls out doesn't help, so it isn't rate limiting.
+- Rank 32 never served on Llama 3.2 3B. Use r ≤ 8, as the docs recommend.
+- Casting to fp16 and trimming `adapter_config.json` to the core fields (`model/export_adapter.py`) made no
+  difference. Raw PEFT 0.21 output (fp32, full config) is accepted.
+- Gotcha: Workers AI parses JSON-looking output, so `result.response` can be an object rather than a string.
+
+**Implication for the app:** the `WorkersAiLLM` provider needs a bounded retry on 500, then a fallback to the base
+model (logged as `adapter_hit=false`). Offline training and eval are unaffected. The failing request IDs are in the
+local run logs, ready for a Cloudflare support or Discord report.

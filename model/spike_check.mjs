@@ -25,6 +25,7 @@ const PROMPTS = [
 const TEMPLATES = {
   "@cf/meta/llama-3.2-3b-instruct": (t) =>
     `<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\n${t}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n`,
+  "@cf/mistral/mistral-7b-instruct-v0.2-lora": (t) => `<s>[INST] ${t} [/INST]`,
   "@cf/qwen/qwen3-30b-a3b-fp8": (t) => `<|im_start|>user\n${t}<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n`,
 };
 const raw = TEMPLATES[MODEL];
