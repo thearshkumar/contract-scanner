@@ -42,6 +42,8 @@ interface Current {
   spans: Found[];
   vectors?: Float32Array[];
   run: number;
+  // True while a live scan is still in flight, so empty results read as "not yet", not "none".
+  scanning?: boolean;
 }
 let current: Current | null = null;
 let live = false;
@@ -80,10 +82,11 @@ function render(): void {
   ui.results.hidden = false;
   ui.docTitle.textContent = c.title;
   const pages = Math.max(1, Math.round(c.text.length / 3000));
-  ui.docMeta.textContent = `${c.text.length.toLocaleString()} characters · about ${pages} pages · ${c.spans.length} passages flagged`;
+  const flagged = c.scanning ? `scanning… ${c.spans.length} passages so far` : `${c.spans.length} passages flagged`;
+  ui.docMeta.textContent = `${c.text.length.toLocaleString()} characters · about ${pages} pages · ${flagged}`;
   const jump = (id: number) => focusSpan(ui.doc, ui.panel, id, true);
   renderDocument(ui.doc, c.text, c.spans, (id) => focusSpan(ui.doc, ui.panel, id, false));
-  renderPanel(ui.panel, c.text, c.spans, { jump, similar: showSimilar });
+  renderPanel(ui.panel, c.text, c.spans, { jump, similar: showSimilar }, c.scanning);
 }
 
 function load(title: string, text: string): Current {
@@ -106,6 +109,7 @@ async function scanText(title: string, raw: string): Promise<void> {
     ui.results.hidden = true;
     return;
   }
+  c.scanning = true;
   render();
   ui.results.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 
@@ -152,6 +156,8 @@ async function scanText(title: string, raw: string): Promise<void> {
   }
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, n) }, worker));
   if (c.run !== current?.run) return;
+  c.scanning = false;
+  render();
 
   if (stop) {
     const s = stop as ApiError;

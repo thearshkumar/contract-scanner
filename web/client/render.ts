@@ -72,7 +72,7 @@ export interface PanelHooks {
   similar(type: ClauseType, text: string, into: HTMLElement, button: HTMLButtonElement): void;
 }
 
-export function renderPanel(panel: HTMLElement, text: string, spans: Found[], hooks: PanelHooks): void {
+export function renderPanel(panel: HTMLElement, text: string, spans: Found[], hooks: PanelHooks, scanning = false): void {
   const byType = new Map<ClauseType, Found[]>();
   for (const s of spans) byType.set(s.type, [...(byType.get(s.type) ?? []), s]);
 
@@ -102,7 +102,8 @@ export function renderPanel(panel: HTMLElement, text: string, spans: Found[], ho
     const head = el("h3", "panel__head ak-label", `${TIER_LABEL[tier]} · ${types.length}`);
     frag.append(head);
     if (!types.length) {
-      frag.append(el("p", "ak-meta", tier === "watch" ? "No high-attention clauses found." : "Nothing else found."));
+      const empty = scanning ? "Scanning…" : tier === "watch" ? "No high-attention clauses found." : "Nothing else found.";
+      frag.append(el("p", "ak-meta", empty));
       continue;
     }
     for (const [type, list] of types) frag.append(card(text, type, list, hooks));
