@@ -32,6 +32,7 @@ Status: **proposed** = waiting for approval, **approved** = OK to install (appro
 | trl | 1.15.0 | Apache-2.0 | SFT trainer | yes | approved |
 | vllm | 0.31.0 | Apache-2.0 | serving the merged model on Modal + offline eval | yes | in use |
 | flashinfer-python (via vllm) | 0.7.0.post1 | Apache-2.0 | attention kernels | yes | in use |
+| flash-linear-attention | 0.5.2 | MIT | fast Gated DeltaNet kernels for Qwen3.5 training | yes | in use |
 | huggingface_hub | 1.x (pinned <2 by tokenizers) | Apache-2.0 | dataset download, adapter upload | yes | approved |
 
 Not used: Unsloth Studio (AGPL-3.0). Unsloth core (Apache-2.0) only if it supports Qwen3-30B-A3B attention-only LoRA; it will be added here first.
