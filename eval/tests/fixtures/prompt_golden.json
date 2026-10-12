@@ -1,0 +1,195 @@
+{
+ "chunk": "Section 1.  This Agreement shall\nautomatically renew for successive one (1) year terms.\n\nSection 2. This Agreement is governed by the laws of the State of Delaware.",
+ "messages": [
+  {
+   "role": "system",
+   "content": "You review commercial contracts. Find every passage in the excerpt that belongs to one of these clause types:\n- Affiliate License-Licensee\n- Affiliate License-Licensor\n- Agreement Date\n- Anti-Assignment\n- Audit Rights\n- Cap On Liability\n- Change Of Control\n- Competitive Restriction Exception\n- Covenant Not To Sue\n- Document Name\n- Effective Date\n- Exclusivity\n- Expiration Date\n- Governing Law\n- Insurance\n- Ip Ownership Assignment\n- Irrevocable Or Perpetual License\n- Joint Ip Ownership\n- License Grant\n- Liquidated Damages\n- Minimum Commitment\n- Most Favored Nation\n- No-Solicit Of Customers\n- No-Solicit Of Employees\n- Non-Compete\n- Non-Disparagement\n- Non-Transferable License\n- Notice Period To Terminate Renewal\n- Parties\n- Post-Termination Services\n- Price Restrictions\n- Renewal Term\n- Revenue/Profit Sharing\n- Rofr/Rofo/Rofn\n- Source Code Escrow\n- Termination For Convenience\n- Third Party Beneficiary\n- Uncapped Liability\n- Unlimited/All-You-Can-Eat-License\n- Volume Restriction\n- Warranty Duration\n\nReply with ONLY a JSON array, one object per passage, in the order they appear:\n[{\"type\": \"<clause type from the list>\", \"begin\": \"<first words of the passage>\", \"end\": \"<last words of the passage>\"}]\n`begin` and `end` must be copied word for word from the excerpt, at most 10 words each. For a short passage, `begin` and `end` may be the same. If nothing matches, reply []."
+  },
+  {
+   "role": "user",
+   "content": "Excerpt:\n<<<\nSection 1.  This Agreement shall\nautomatically renew for successive one (1) year terms.\n\nSection 2. This Agreement is governed by the laws of the State of Delaware.\n>>>"
+  }
+ ],
+ "parse": [
+  {
+   "input": "[{\"type\": \"Governing Law\", \"begin\": \"This Agreement is governed\", \"end\": \"State of Delaware.\"}]",
+   "items": [
+    {
+     "type": "Governing Law",
+     "begin": "This Agreement is governed",
+     "end": "State of Delaware."
+    }
+   ],
+   "ok": true
+  },
+  {
+   "input": "```json\n[{\"type\": \"renewal term\", \"begin\": \"This Agreement shall automatically\", \"end\": \"year terms.\"}]\n```",
+   "items": [
+    {
+     "type": "Renewal Term",
+     "begin": "This Agreement shall automatically",
+     "end": "year terms."
+    }
+   ],
+   "ok": true
+  },
+  {
+   "input": "<think>\n\n</think>\n\n[]",
+   "items": [],
+   "ok": true
+  },
+  {
+   "input": "",
+   "items": [],
+   "ok": true
+  },
+  {
+   "input": "Nothing found.",
+   "items": [],
+   "ok": false
+  },
+  {
+   "input": "[{\"type\": \"Parties\", \"begin\": \"Acme Inc.\"}, {\"type\": \"Not A Type\", \"begin\": \"x\"}, {\"type\": \"Parties\"}]",
+   "items": [
+    {
+     "type": "Parties",
+     "begin": "Acme Inc.",
+     "end": "Acme Inc."
+    }
+   ],
+   "ok": true
+  },
+  {
+   "input": "[{\"type\": \"Governing Law\", \"begin\": \"governed by\", \"end\": \"Delaware.\"}, {\"type\": \"Renewal Term\", \"beg",
+   "items": [
+    {
+     "type": "Governing Law",
+     "begin": "governed by",
+     "end": "Delaware."
+    }
+   ],
+   "ok": false
+  },
+  {
+   "input": "[{\"type\": \"Parties\", \"quote\": \"Acme Corp\"}, 5, \"str\", {\"type\": \"Agreement Date\", \"begin\": \"\", \"end\": \"x\"}]",
+   "items": [
+    {
+     "type": "Parties",
+     "begin": "Acme Corp",
+     "end": "Acme Corp"
+    }
+   ],
+   "ok": true
+  }
+ ],
+ "locate": [
+  {
+   "begin": "This Agreement shall automatically renew",
+   "end": "year terms.",
+   "result": [
+    12,
+    87
+   ]
+  },
+  {
+   "begin": "this agreement is GOVERNED",
+   "end": "state of delaware.",
+   "result": [
+    100,
+    164
+   ]
+  },
+  {
+   "begin": "Section 2.",
+   "end": "",
+   "result": [
+    89,
+    99
+   ]
+  },
+  {
+   "begin": "not in the text",
+   "end": "x",
+   "result": null
+  },
+  {
+   "begin": "",
+   "end": "x",
+   "result": null
+  },
+  {
+   "begin": "Section 1. This",
+   "end": "missing end",
+   "result": [
+    0,
+    16
+   ]
+  }
+ ],
+ "dedupe": {
+  "input": [
+   [
+    "Parties",
+    0,
+    50
+   ],
+   [
+    "Parties",
+    10,
+    40
+   ],
+   [
+    "Parties",
+    45,
+    120
+   ],
+   [
+    "Governing Law",
+    0,
+    50
+   ],
+   [
+    "Renewal Term",
+    200,
+    260
+   ],
+   [
+    "Renewal Term",
+    230,
+    300
+   ],
+   [
+    "Renewal Term",
+    100,
+    101
+   ]
+  ],
+  "output": [
+   [
+    "Governing Law",
+    0,
+    50
+   ],
+   [
+    "Parties",
+    0,
+    50
+   ],
+   [
+    "Parties",
+    45,
+    120
+   ],
+   [
+    "Renewal Term",
+    100,
+    101
+   ],
+   [
+    "Renewal Term",
+    200,
+    260
+   ]
+  ]
+ }
+}
