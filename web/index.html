@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="/client/styles.css">
 </head>
 <body class="ak-root">
+<canvas id="bg" aria-hidden="true"></canvas>
 <a class="skip" href="#scan">Skip to the scanner</a>
 <ak-header site="contracts"></ak-header>
 
@@ -138,6 +139,7 @@
   <p>Model: <a class="ak-link" href="https://huggingface.co/Qwen/Qwen3.5-2B">Qwen3.5-2B</a> (Apache-2.0), fine-tuned with LoRA. Data: <a class="ak-link" href="https://www.atticusprojectai.org/cuad">CUAD v1</a> by The Atticus Project (CC BY 4.0), Hendrycks et al., NeurIPS 2021.</p>
   <p>Source code: <a class="ak-link" href="https://github.com/thearshkumar/contract-scanner">github.com/thearshkumar/contract-scanner</a> (MIT). Not legal advice.</p>
 </ak-footer>
+<script src="/bg.js" defer></script>
 <script type="module" src="/client/main.ts"></script>
 </body>
 </html>

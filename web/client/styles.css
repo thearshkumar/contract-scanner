@@ -1,6 +1,12 @@
 /* Page layout only. Tokens, fonts and components (.ak-btn, .ak-tag, .ak-card, .ak-input, .ak-spec, .ak-callout,
    .ak-section-label, .reveal) come from the shared kit at arshkumar.com/kit/kit.css. */
 
+/* 3D background (public/bg.js): a fixed canvas behind the page */
+html { background: var(--paper); }
+body, .ak-root { background: transparent; } /* let the #bg canvas show through */
+main, ak-footer { position: relative; z-index: 1; }
+#bg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; display: block; }
+
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ---------- hero and sections (same rhythm as arshkumar.com) ---------- */

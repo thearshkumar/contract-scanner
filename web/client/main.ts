@@ -100,6 +100,11 @@ function load(title: string, text: string): Current {
 
 // ---------- scanning ----------
 
+/** Tell the decorative 3D background (public/bg.js) what the scanner is doing. */
+function bg(name: string, detail?: object): void {
+  window.dispatchEvent(new CustomEvent(`ak:${name}`, { detail }));
+}
+
 async function scanText(title: string, raw: string): Promise<void> {
   const text = tidy(raw);
   const c = load(title, text);
@@ -111,6 +116,7 @@ async function scanText(title: string, raw: string): Promise<void> {
   }
   c.scanning = true;
   render();
+  bg("scan-start");
   ui.results.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 
   const n = c.chunks.length;
@@ -152,6 +158,7 @@ async function scanText(title: string, raw: string): Promise<void> {
       c.spans = dedupe(found).map((s) => ({ ...s }));
       render();
       setStatus(`Scanning section ${Math.min(done + 1, n)} of ${n}…`, done / n);
+      bg("scan-progress", { p: done / n, flagged: c.spans.length });
     }
   }
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, n) }, worker));
@@ -162,10 +169,12 @@ async function scanText(title: string, raw: string): Promise<void> {
   if (stop) {
     const s = stop as ApiError;
     showPaused(s.resetsAt, s.reason);
+    bg("error");
     setStatus(`Stopped after ${done} of ${n} sections. ${s.message}`);
     return;
   }
   const notes = [failed ? `${failed} section${failed > 1 ? "s" : ""} failed, so some clauses may be missing` : "", misses ? `${misses} model quote${misses > 1 ? "s" : ""} couldn't be matched to the text and were dropped` : ""].filter(Boolean);
+  bg("scan-done", { flagged: c.spans.length, total: n });
   setStatus(`Done: ${c.spans.length} passages in ${n} sections.${notes.length ? ` Note: ${notes.join("; ")}.` : ""}`);
 }
 
@@ -176,6 +185,8 @@ async function loadDemo(id: string, title: string, button: HTMLButtonElement): P
   const c = load(`${title} (demo)`, d.text);
   c.spans = d.spans.map((s, i) => ({ id: i, ...s }));
   render();
+  bg("scan-start");
+  bg("scan-done", { flagged: c.spans.length, total: c.chunks.length });
   setStatus(`Demo: precomputed by the same model, no GPU time used. ${d.attribution}`);
   ui.results.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 }
