@@ -1,7 +1,7 @@
 """Checks the deployed scanner endpoint (model/serve.py): cold and warm latency, output parse rate, and a log canary.
 
-    export MODAL_SCAN_URL=https://<workspace>--contract-scanner-serve-scanner-serve.modal.run
-    export MODAL_KEY=wk-... MODAL_SECRET=ws-...          # a proxy-auth token (modal workspace proxy-tokens)
+    # MODAL_SCAN_URL, MODAL_KEY, MODAL_SECRET (a proxy-auth token) are read from .env in the repo root,
+    # unless already set in the environment.
     uv run --with modal==1.6.1 python model/serve_check.py --cold 3 --warm 3
 
 Cold runs wait past the scale-down window so the container shuts down, then time the first request (a snapshot
@@ -28,6 +28,28 @@ from eval.chunk import chunk_text
 from eval.prompt import messages, parse
 from model.serve import SCALEDOWN_SECS, SERVED_NAME
 
+DOTENV = Path(__file__).resolve().parent.parent / ".env"
+
+
+def load_dotenv(path: Path = DOTENV) -> None:
+    """Reads KEY=VALUE lines from the repo's .env (gitignored) into os.environ; variables already set win.
+
+    Stdlib only. Values are never printed or logged.
+    """
+    if not path.exists():
+        return
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.removeprefix("export ").strip()
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
+            value = value[1:-1]
+        if key and value:
+            os.environ.setdefault(key, value)
+
 
 def call(url: str, chunk: str) -> tuple[float, str]:
     body = {"model": SERVED_NAME, "messages": messages(chunk), "max_tokens": 1024, "temperature": 0,
@@ -46,6 +68,10 @@ def main() -> None:
     ap.add_argument("--cold", type=int, default=3)
     ap.add_argument("--warm", type=int, default=3)
     args = ap.parse_args()
+    load_dotenv()
+    missing = [k for k in ("MODAL_SCAN_URL", "MODAL_KEY", "MODAL_SECRET") if not os.environ.get(k)]
+    if missing:
+        sys.exit(f"missing {', '.join(missing)}: add them to .env in the repo root (see .env.example)")
     url = os.environ["MODAL_SCAN_URL"].rstrip("/")
 
     _, test = cuad.split(cuad.load())

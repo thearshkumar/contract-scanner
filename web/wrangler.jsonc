@@ -1,45 +1,84 @@
 {
-  "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "contract-scanner",
-  "main": "src/index.ts",
-  "compatibility_date": "2026-10-01",
-  "workers_dev": true,
-  // https://developers.cloudflare.com/workers/configuration/routing/custom-domains/
-  "routes": [{ "pattern": "contracts.arshkumar.com", "custom_domain": true }],
-  // Static client (built by Vite) is served without invoking the Worker, so page loads cost no CPU and no log events.
-  "assets": { "not_found_handling": "single-page-application", "run_worker_first": ["/api/*"] },
-
-  // Workers AI (Q&A + embeddings). No AI Gateway: its logs are on by default and would store prompts.
-  "ai": { "binding": "AI", "remote": true },
-
-  // CUAD example clauses only (public data, train split). 75/type x 1024-d = 3.15M stored dims; the 5M free
-  // allowance is per account and shared with search.arshkumar.com. https://developers.cloudflare.com/vectorize/platform/pricing/
-  "vectorize": [{ "binding": "CLAUSES", "index_name": "cs-clauses", "remote": true }],
-
-  // Every cost guard (GPU dollars, neurons, Vectorize queries, per-visitor quotas, burst limits): one SQLite-backed
-  // Durable Object, available on Workers Free. https://developers.cloudflare.com/durable-objects/platform/pricing/
-  "durable_objects": { "bindings": [{ "name": "USAGE_BUDGET", "class_name": "UsageBudget" }] },
-  "migrations": [
-    { "tag": "v1", "new_sqlite_classes": ["NeuronBudget"] },
-    { "tag": "v2", "renamed_classes": [{ "from": "NeuronBudget", "to": "UsageBudget" }] }
-  ],
-
-  // Workers Logs: one summary line per API request (src/log.ts); invocation logs off to halve event count.
-  // Free: 200k events/day, 3-day retention; from 2026-12-01, 0.5 GB/day ingest.
-  // https://developers.cloudflare.com/workers/observability/logs/workers-logs/
-  "observability": { "enabled": true, "logs": { "invocation_logs": false } },
-
-  // Secrets (wrangler secret put; locally in .dev.vars): MODAL_KEY, MODAL_SECRET (Modal proxy-auth token),
-  // LOG_SALT (keys log fingerprints), IP_SALT_KEY (keys the daily visitor-id salt).
-  "vars": {
-    "MODAL_SCAN_URL": "", // set after `modal deploy model/serve.py`; empty = live scanning off (demos only)
-    "MODAL_SCALEDOWN_SECS": "20", // = SCALEDOWN_SECS in model/serve.py
-    "QA_MODEL_ID": "@cf/qwen/qwen3-30b-a3b-fp8",
-    // $10/month: 31 days x ($0.27 cap + <= $0.048 overshoot from one in-flight call + scale-down) = $9.86
-    "DAILY_USD_MICROS": "270000",
-    "VISITOR_USD_MICROS": "67500", // 25% of the day: about 4 cold or 20 warm scans per visitor
-    "DAILY_NEURON_CAP": "7000", // the 10k/day free allocation is per account, shared with search.arshkumar.com
-    "VISITOR_NEURON_CAP": "1000",
-    "DAILY_SIMILAR_CAP": "300" // ~9k queries/month x 1024-d stays within half of the 30M free queried dims
-  }
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "contract-scanner",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-10-01",
+	"workers_dev": true,
+	// https://developers.cloudflare.com/workers/configuration/routing/custom-domains/
+	"routes": [
+		{
+			"pattern": "contracts.arshkumar.com",
+			"custom_domain": true
+		}
+	],
+	// Static client (built by Vite) is served without invoking the Worker, so page loads cost no CPU and no log events.
+	"assets": {
+		"not_found_handling": "single-page-application",
+		"run_worker_first": [
+			"/api/*"
+		]
+	},
+	// Workers AI (Q&A + embeddings). No AI Gateway: its logs are on by default and would store prompts.
+	"ai": {
+		"binding": "AI",
+		"remote": true
+	},
+	// CUAD example clauses only (public data, train split). 75/type x 1024-d = 3.15M stored dims; the 5M free
+	// allowance is per account and shared with search.arshkumar.com. https://developers.cloudflare.com/vectorize/platform/pricing/
+	"vectorize": [
+		{
+			"binding": "CLAUSES",
+			"index_name": "cs-clauses",
+			"remote": true
+		}
+	],
+	// Every cost guard (GPU dollars, neurons, Vectorize queries, per-visitor quotas, burst limits): one SQLite-backed
+	// Durable Object, available on Workers Free. https://developers.cloudflare.com/durable-objects/platform/pricing/
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "USAGE_BUDGET",
+				"class_name": "UsageBudget"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": [
+				"NeuronBudget"
+			]
+		},
+		{
+			"tag": "v2",
+			"renamed_classes": [
+				{
+					"from": "NeuronBudget",
+					"to": "UsageBudget"
+				}
+			]
+		}
+	],
+	// Workers Logs: one summary line per API request (src/log.ts); invocation logs off to halve event count.
+	// Free: 200k events/day, 3-day retention; from 2026-12-01, 0.5 GB/day ingest.
+	// https://developers.cloudflare.com/workers/observability/logs/workers-logs/
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"invocation_logs": false
+		}
+	},
+	// Secrets (wrangler secret put; locally in .dev.vars): MODAL_KEY, MODAL_SECRET (Modal proxy-auth token),
+	// LOG_SALT (keys log fingerprints), IP_SALT_KEY (keys the daily visitor-id salt).
+	"vars": {
+		"MODAL_SCAN_URL": "https://thearshkumar--contract-scanner-serve-scanner-serve.modal.run", // set after `modal deploy model/serve.py`; empty = live scanning off (demos only)
+		"MODAL_SCALEDOWN_SECS": "20", // = SCALEDOWN_SECS in model/serve.py
+		"QA_MODEL_ID": "@cf/qwen/qwen3-30b-a3b-fp8",
+		// $10/month: 31 days x ($0.27 cap + <= $0.048 overshoot from one in-flight call + scale-down) = $9.86
+		"DAILY_USD_MICROS": "270000",
+		"VISITOR_USD_MICROS": "67500", // 25% of the day: about 4 cold or 20 warm scans per visitor
+		"DAILY_NEURON_CAP": "7000", // the 10k/day free allocation is per account, shared with search.arshkumar.com
+		"VISITOR_NEURON_CAP": "1000",
+		"DAILY_SIMILAR_CAP": "300" // ~9k queries/month x 1024-d stays within half of the 30M free queried dims
+	}
 }
