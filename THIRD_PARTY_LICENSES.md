@@ -30,7 +30,8 @@ Status: **proposed** = waiting for approval, **approved** = OK to install (appro
 | transformers | 5.19.0 | Apache-2.0 | training/inference | yes | approved |
 | peft | 0.21.2 | Apache-2.0 | LoRA | yes | approved |
 | trl | 1.15.0 | Apache-2.0 | SFT trainer | yes | approved |
-| vllm | 0.31.0 | Apache-2.0 | offline eval serving (fp8 + LoRA) | yes | approved |
+| vllm | 0.31.0 | Apache-2.0 | serving the merged model on Modal + offline eval | yes | in use |
+| flashinfer-python (via vllm) | 0.7.0.post1 | Apache-2.0 | attention kernels | yes | in use |
 | huggingface_hub | 1.x (pinned <2 by tokenizers) | Apache-2.0 | dataset download, adapter upload | yes | approved |
 
 Not used: Unsloth Studio (AGPL-3.0). Unsloth core (Apache-2.0) only if it supports Qwen3-30B-A3B attention-only LoRA; it will be added here first.
@@ -43,6 +44,12 @@ Not used: Unsloth Studio (AGPL-3.0). Unsloth core (Apache-2.0) only if it suppor
 | astral-sh/setup-uv | MIT | CI | in use |
 | cloudflare/wrangler-action | Apache-2.0 | deploy (Phase 2) | approved |
 
+## Container images
+
+| Image | Licence | Use | Note |
+|---|---|---|---|
+| nvidia/cuda:12.8.1-devel-ubuntu24.04 | ⚠ NVIDIA CUDA Toolkit EULA + Ubuntu | base for the Modal vLLM image (needs nvcc) | used only to run our job on Modal, never redistributed; no repo code is under it |
+
 ## Models
 
 | Model | Licence | Use | Compliant? | Status |
@@ -51,8 +58,9 @@ Not used: Unsloth Studio (AGPL-3.0). Unsloth core (Apache-2.0) only if it suppor
 | Qwen/Qwen3-30B-A3B-FP8 (HF) | Apache-2.0 | offline eval (matches Workers AI fp8 serving) | yes | approved |
 | @cf/qwen/qwen3-30b-a3b-fp8 (Workers AI) | Apache-2.0 upstream; Cloudflare service terms | live clause detection + Q&A | yes | approved |
 | Qwen/Qwen3-0.6B (HF) | to check before use | cheap pipeline dry-runs on Colab | — | not yet checked |
-| meta-llama/Llama-3.2-3B-Instruct (HF, gated) | ⚠ Llama 3.2 Community License (custom) | **chosen base** for LoRA training | yes, with conditions below | approved 2026-10-11 |
-| @cf/meta/llama-3.2-3b-instruct (Workers AI) | Llama 3.2 Community License; Cloudflare service terms | live clause detection + Q&A with the adapter | yes | approved 2026-10-11 |
+| **Qwen/Qwen3.5-2B (HF)** | Apache-2.0 | **chosen base** (2026-10-12): LoRA training on Modal, merged and served with vLLM on Modal | yes | approved |
+| meta-llama/Llama-3.2-3B-Instruct (HF, gated) | ⚠ Llama 3.2 Community License (custom) | spike only (superseded by Qwen3.5-2B) | yes | used in spike |
+| @cf/meta/llama-3.2-3b-instruct (Workers AI) | Llama 3.2 Community License; Cloudflare service terms | spike only | yes | used in spike |
 | @cf/baai/bge-m3 (Workers AI) | MIT upstream | embeddings | yes | approved |
 
 ### Llama 3.2 conditions we follow

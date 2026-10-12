@@ -84,3 +84,29 @@ Same sentinel method, `model/spike.py --base llama-3.2-3b` on a Modal L4 (traini
 **Implication for the app:** the `WorkersAiLLM` provider needs a bounded retry on 500, then a fallback to the base
 model (logged as `adapter_hit=false`). Offline training and eval are unaffected. The failing request IDs are in the
 local run logs, ready for a Cloudflare support or Discord report.
+
+## Round 3: Qwen3.5-2B, trained and served on Modal (2026-10-12)
+
+The decision after round 2: train **and serve** on Modal, so Cloudflare's LoRA serving is no longer on the path.
+Script: `model/spike_qwen35.py` (pinned `Qwen/Qwen3.5-2B@15852e8`, Apache-2.0).
+
+| Step | Result |
+|---|---|
+| LoRA on all 186 text-model linear layers (attention, Gated DeltaNet `in_proj_*`/`out_proj`, MLP; vision tower untouched), r=8, L4 | trained in 15 s; 33.7 MB adapter |
+| Offline (transformers) | sentinel **5/5** with adapter, **0/5** without |
+| `merge_and_unload()` → vLLM 0.31 on L4, base weights | 0/5 sentinel (control) |
+| Same, **merged** weights | **5/5** sentinel: the fine-tune survives merging and serving |
+| vLLM batch: 10 contract-like chunks, 13,780 tokens in / 3,000 out | **6.7 s** |
+| vLLM cold start (load + FlashInfer JIT + CUDA graphs) | 210–265 s, needs fixing (below) |
+
+Notes:
+- vLLM needs a CUDA **devel** image (`nvidia/cuda:12.8.1-devel-ubuntu24.04`): FlashInfer JIT-compiles kernels for
+  the Gated DeltaNet layers at engine start and fails with `Could not find nvcc` on a slim image.
+- Training fell back to the PyTorch reference kernels for the linear-attention layers (`flash-linear-attention` not
+  installed). That's fine at this size; add it for the real run if training is slow.
+- Thinking is disabled with `enable_thinking=False`, which renders an empty `<think></think>` block.
+
+**Cost implication.** Warm, one contract (about 10 chunks) is about 7 s of L4 time, about $0.0016. The cold start
+dominates, so the serving phase must cut it: persist the FlashInfer/torch compile caches on a Modal Volume, try Modal
+memory snapshots, and keep a short scale-down window. Cold starts count against the $10/month cap (enforced in the
+Worker's budget Durable Object).
