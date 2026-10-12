@@ -1,9 +1,10 @@
-// Per-IP burst limit via the Workers Rate Limiting binding (approximate, per Cloudflare location):
-// https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/
-// The exact daily cost ceiling is the NeuronBudget Durable Object, not this.
+// Per-visitor identity for the UsageBudget Durable Object (which also does burst limiting, exactly).
+// The Workers rate-limit binding was dropped: it is per-location and eventually consistent
+// (https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/), and ResearchRAG saw it let
+// 30+ requests/min through a 5/min limit in production.
 
-export async function allowRequest(env: Env, request: Request): Promise<boolean> {
-  const ip = request.headers.get("CF-Connecting-IP") ?? "local";
-  const { success } = await env.RATE_LIMITER.limit({ key: ip });
-  return success;
+import { visitorId } from "../crypto";
+
+export function visitorFor(env: Env, request: Request, day: string): Promise<string> {
+  return visitorId(env.IP_SALT_KEY, request.headers.get("CF-Connecting-IP") ?? "local", day);
 }

@@ -1,6 +1,8 @@
 // Structured logging that stays inside the Workers Logs free tier and never records user content.
 // Each API request writes exactly ONE summary line (flush), plus one error line only on failure.
-// Inputs are logged as sha256 + length, never as text.
+// Inputs are logged as a keyed fingerprint (HMAC, see crypto.ts) + length, never as text.
+
+import { hmacHex } from "./crypto";
 
 export const MAX_LINE_BYTES = 1024;
 
@@ -17,6 +19,7 @@ export class RequestLog {
     readonly route: string,
     reqId?: string,
     private sink: (line: string) => void = console.log,
+    private fingerprintKey?: string,
   ) {
     this.reqId = reqId ?? crypto.randomUUID();
   }
@@ -36,10 +39,10 @@ export class RequestLog {
     }
   }
 
-  /** Records a user-supplied input by fingerprint only. */
+  /** Records a user-supplied input by keyed fingerprint and length only. */
   async input(name: string, text: string): Promise<void> {
     this.fields[`${name}_len`] = text.length;
-    this.fields[`${name}_sha256`] = (await sha256(text)).slice(0, 16);
+    this.fields[`${name}_fp`] = await hmacHex(this.fingerprintKey, text);
   }
 
   error(err: unknown): void {
@@ -63,9 +66,4 @@ export class RequestLog {
     });
     this.sink(line.length > MAX_LINE_BYTES ? JSON.stringify({ level: "info", reqId: this.reqId, route: this.route, status, truncated: true }) : line);
   }
-}
-
-export async function sha256(text: string): Promise<string> {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }

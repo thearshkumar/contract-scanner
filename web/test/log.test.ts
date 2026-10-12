@@ -33,8 +33,21 @@ describe("RequestLog", () => {
     expect(all).not.toContain("terminate early");
     const row = JSON.parse(lines.at(-1)!);
     expect(row.contract_len).toBe(SECRET.length);
-    expect(row.contract_sha256).toMatch(/^[0-9a-f]{16}$/);
+    expect(row.contract_fp).toMatch(/^[0-9a-f]{16}$/);
+    expect(row).not.toHaveProperty("contract_sha256");
     expect(JSON.parse(lines[0]!)).toMatchObject({ level: "error", error: "SyntaxError" });
+  });
+
+  it("fingerprints are keyed: same text, different key, different fingerprint", async () => {
+    const a = capture();
+    const b = capture();
+    const la = new RequestLog("/api/scan", "r", a.sink, "key-a");
+    const lb = new RequestLog("/api/scan", "r", b.sink, "key-b");
+    await la.input("chunk", SECRET);
+    await lb.input("chunk", SECRET);
+    la.flush(200);
+    lb.flush(200);
+    expect(JSON.parse(a.lines[0]!).chunk_fp).not.toBe(JSON.parse(b.lines[0]!).chunk_fp);
   });
 
   it("keeps every line within the size cap", () => {
