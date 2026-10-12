@@ -6,10 +6,13 @@ const keys = new Map<string, Promise<CryptoKey>>();
 
 // Fallback when a secret is not configured (local dev, tests): a random per-isolate key. Fingerprints then can't be
 // linked across isolates, which is safe for privacy but weakens the per-visitor quota, so production sets the secrets.
-const fallback = [...crypto.getRandomValues(new Uint8Array(32))].map((b) => b.toString(16).padStart(2, "0")).join("");
+// Created lazily: workerd forbids random values in global scope (deploy fails with code 10021).
+let fallback: string | undefined;
+const fallbackKey = () =>
+  (fallback ??= [...crypto.getRandomValues(new Uint8Array(32))].map((b) => b.toString(16).padStart(2, "0")).join(""));
 
 function key(secret: string | undefined): Promise<CryptoKey> {
-  const s = secret || fallback;
+  const s = secret || fallbackKey();
   let k = keys.get(s);
   if (!k) {
     k = crypto.subtle.importKey("raw", enc.encode(s), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
