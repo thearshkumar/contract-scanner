@@ -5,7 +5,7 @@
 import { resetsAt } from "../guard/budget";
 import { MODAL_USD_MICROS_PER_SEC } from "../providers/rates";
 import { messages, parse, toSpans } from "../core/scan-prompt";
-import { type Ctx, json, readJson, refuse, str } from "./common";
+import { type Ctx, HttpError, json, readJson, refuse, str } from "./common";
 
 /** The chunker cuts at 6,000 chars at most; a little slack for client/server whitespace differences. */
 export const MAX_CHUNK_CHARS = 6200;
@@ -16,6 +16,9 @@ export async function scan(request: Request, c: Ctx): Promise<Response> {
   const idx = Number.isInteger(body.idx) ? (body.idx as number) : 0;
   await c.log.input("chunk", chunk);
 
+  if (!c.scannerConfigured) {
+    throw new HttpError(503, { error: "Live scanning is offline right now. Try a demo contract.", reason: "offline", demoOnly: true });
+  }
   const admit = await c.deps.budget.admitScan(c.day, c.visitor, Date.now(), c.caps);
   if (!admit.ok) refuse(admit, resetsAt());
 

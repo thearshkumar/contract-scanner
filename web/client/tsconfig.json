@@ -1,0 +1,16 @@
+{
+  // The browser client is type-checked on its own: the Workers runtime types redefine DOM names (Element, Response).
+  "compilerOptions": {
+    "target": "es2023",
+    "module": "es2022",
+    "moduleResolution": "bundler",
+    "lib": ["es2023", "dom", "dom.iterable"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["vite/client"],
+    "resolveJsonModule": true
+  },
+  "include": [".", "../src/core"]
+}

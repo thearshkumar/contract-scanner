@@ -23,6 +23,7 @@ function deps(over: Partial<Deps> = {}): Deps {
       { clause: { id: "a", clauseType: "Governing Law", text: "governed by the laws of New York", source: "X Corp" }, vector: new Array(64).fill(1) },
     ]),
     budget: budgetStub(env),
+    scannerConfigured: true,
     ...over,
   };
 }
@@ -78,6 +79,15 @@ describe("routes", () => {
     expect(row).toMatchObject({ route: "/api/scan", status: 200, items: 1, anchor_misses: 0, parse_ok: true });
     expect(row.chunk_fp).toMatch(/^[0-9a-f]{16}$/);
     expect(row.usd_micros).toBeGreaterThan(0);
+    spy.mockRestore();
+  });
+
+  it("scan: offline (no Modal URL/secrets) is demo-only and charges nothing", async () => {
+    const spy = captureLogs();
+    const res = await handle(post("/api/scan", { chunk: CHUNK }), env, deps({ scannerConfigured: false }));
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ reason: "offline", demoOnly: true });
+    expect(JSON.parse(spy.mock.calls[0]![0] as string)).not.toHaveProperty("usd_micros");
     spy.mockRestore();
   });
 

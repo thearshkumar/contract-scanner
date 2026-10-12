@@ -4,24 +4,140 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Contract Risk Scanner — Arsh Kumar</title>
-<meta name="description" content="Upload a contract, see the risky clauses highlighted. A portfolio demo by Arsh Kumar.">
+<meta name="description" content="Upload a contract, see the risky clauses highlighted. A fine-tuned Qwen3.5-2B, trained on CUAD. A portfolio demo by Arsh Kumar.">
+<meta name="theme-color" content="#12110f">
+<meta name="referrer" content="no-referrer">
 <link rel="icon" href="https://arshkumar.com/kit/favicon.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&family=Instrument+Serif:ital@0;1&display=swap">
-<!-- Shared header, footer, theme and cursor for every *.arshkumar.com site (source: arshkumar.com repo, tools/kit/) -->
+<!-- Shared design system for every *.arshkumar.com site: tokens, self-hosted fonts, components, header, footer,
+     theme (source: arshkumar.com repo, public/kit/ and tools/kit/). No third-party fonts or analytics. -->
 <link rel="stylesheet" href="https://arshkumar.com/kit/kit.css">
 <script src="https://arshkumar.com/kit/kit.js"></script>
 <link rel="stylesheet" href="/client/styles.css">
 </head>
 <body class="ak-root">
+<a class="skip" href="#scan">Skip to the scanner</a>
 <ak-header site="contracts"></ak-header>
-<main class="wrap">
-  <p class="disclaimer" role="note"><strong>Not legal advice.</strong> A portfolio demo trained on US commercial contracts (CUAD). Your file is parsed in your browser and never stored.</p>
-  <h1>Upload a contract, see the <em>risky clauses</em> highlighted.</h1>
-  <p class="lede">Coming soon. <span id="status">Checking the API…</span></p>
+
+<main>
+  <section class="hero wrap">
+    <p class="hero__eyebrow ak-label"><b>Live</b> · Qwen3.5-2B + LoRA · trained on CUAD</p>
+    <h1>Upload a contract, see the <em>risky clauses</em> highlighted.</h1>
+    <p class="hero__lede">A 2B-parameter model fine-tuned to find 41 kinds of clauses lawyers look for, from uncapped liability to change of control. It lifts held-out span F1 from 0.02 to 0.49 over the same model untuned.</p>
+    <p class="hero__note ak-meta"><strong>Not legal advice.</strong> Your file is read in your browser; only its text is sent for scanning, and nothing is stored. <a class="ak-link" href="#privacy">How your contract is handled</a></p>
+  </section>
+
+  <div class="wrap">
+    <div id="paused" class="ak-callout paused" role="status" hidden>
+      <span class="ak-label">Live scans paused</span>
+      <span id="paused-text"></span>
+    </div>
+  </div>
+
+  <section id="scan" class="sec wrap" aria-labelledby="scan-h">
+    <div class="ak-section-label ak-label"><span class="ak-section-label__num">01</span><span id="scan-h">— Scan</span><span class="ak-section-label__rule"></span><span class="ak-section-label__aside">PDF, DOCX or text</span></div>
+
+    <div class="intake">
+      <label id="drop" class="drop" for="file">
+        <input id="file" type="file" accept=".pdf,.docx,.txt,.md,application/pdf,text/plain">
+        <span class="drop__title">Drop a contract here, or <u>choose a file</u></span>
+        <span class="ak-meta">PDF (text, not scanned), DOCX or TXT · up to about 60 pages</span>
+      </label>
+      <div class="paste">
+        <label class="ak-label" for="paste">Or paste the text</label>
+        <textarea id="paste" class="ak-input paste__box" rows="5" placeholder="This Agreement is made on…"></textarea>
+        <button id="scan-paste" class="ak-btn ak-btn--primary" type="button">Scan text <span class="ak-btn__arrow">→</span></button>
+      </div>
+    </div>
+
+    <div class="demos">
+      <span class="ak-label">Or try a demo contract</span>
+      <div id="demos" class="ak-tags"></div>
+    </div>
+
+    <p id="status" class="status ak-meta" role="status" aria-live="polite"></p>
+    <div id="progress" class="progress" hidden><div id="progress-bar" class="progress__bar"></div></div>
+
+    <div id="results" class="results" hidden>
+      <article class="docwrap" aria-labelledby="doc-title">
+        <header class="doc__head">
+          <h2 id="doc-title" class="doc__title"></h2>
+          <p id="doc-meta" class="ak-meta"></p>
+          <p class="legend ak-meta" aria-hidden="true"><span class="hl hl--watch">Watch</span> <span class="hl hl--note">Note</span> <span class="hl hl--fact">Key fact</span></p>
+        </header>
+        <div id="doc" class="doc"></div>
+      </article>
+      <aside id="panel" class="panel" aria-label="Flagged clauses"></aside>
+    </div>
+  </section>
+
+  <section id="ask" class="sec wrap" aria-labelledby="ask-h">
+    <div class="ak-section-label ak-label"><span class="ak-section-label__num">02</span><span id="ask-h">— Ask this contract</span><span class="ak-section-label__rule"></span><span class="ak-section-label__aside">answers cite sections</span></div>
+    <h2 class="sec__title">Ask a <em>question</em>, get an answer that points at the text.</h2>
+    <form id="ask-form" class="askform">
+      <label class="visually-hidden" for="ask-input">Question</label>
+      <input id="ask-input" class="ak-input" type="text" maxlength="500" placeholder="Can either party terminate early, and with how much notice?" disabled>
+      <button id="ask-btn" class="ak-btn ak-btn--primary" type="submit" disabled>Ask <span class="ak-btn__arrow">→</span></button>
+    </form>
+    <p id="ask-status" class="status ak-meta" role="status" aria-live="polite">Scan a contract or open a demo first.</p>
+    <div id="answer" class="answer" hidden></div>
+  </section>
+
+  <section id="how" class="sec wrap" aria-labelledby="how-h">
+    <div class="ak-section-label ak-label"><span class="ak-section-label__num">03</span><span id="how-h">— How it works</span><span class="ak-section-label__rule"></span><span class="ak-section-label__aside">eval, pipeline, privacy, cost</span></div>
+    <h2 class="sec__title">A small model, <em>measured</em> before and after fine-tuning.</h2>
+
+    <div class="how">
+      <div class="reveal">
+        <h3 class="ak-label how__h">Held-out results · 97 CUAD contracts</h3>
+        <div class="tablewrap">
+          <table class="results-table">
+            <thead><tr><th scope="col">Metric</th><th scope="col">Zero-shot</th><th scope="col">+ LoRA r8</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Span F1 (IoU ≥ 0.5)</th><td>0.023</td><td><b>0.492</b></td></tr>
+              <tr><th scope="row">Clause presence F1</th><td>0.387</td><td><b>0.833</b></td></tr>
+              <tr><th scope="row">Unparseable outputs</th><td>58.6%</td><td><b>4.1%</b></td></tr>
+              <tr><th scope="row">Output tokens</th><td>709k</td><td><b>175k</b></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="ak-meta">Strong: governing law 0.86, agreement date 0.76, parties 0.70. Weak: non-compete 0.26, termination for convenience 0.21. Cards for weak types say “low accuracy”.</p>
+      </div>
+
+      <div class="reveal">
+        <h3 class="ak-label how__h">Pipeline</h3>
+        <ol class="steps">
+          <li><b>In your browser:</b> pdf.js or mammoth extracts the text and splits it into overlapping sections of about 1,500 tokens, with the same chunker the model was trained on.</li>
+          <li><b>Cloudflare Worker:</b> builds the fixed prompt and checks the daily budget.</li>
+          <li><b>Modal GPU (L4):</b> vLLM runs Qwen3.5-2B with the LoRA merged in. It returns each clause's type and its first and last words.</li>
+          <li><b>Back in the Worker:</b> those anchors are matched to exact character offsets, so highlights land on the real text.</li>
+          <li><b>Ask</b> embeds sections with bge-m3 and answers with Qwen3-30B-A3B on Workers AI, citing only sections it was given.</li>
+        </ol>
+      </div>
+
+      <div id="privacy" class="reveal">
+        <h3 class="ak-label how__h">How your contract is handled</h3>
+        <dl class="ak-spec">
+          <div class="ak-spec__row"><dt>Your file</dt><dd>Read in your browser. The file itself is never uploaded.</dd></div>
+          <div class="ak-spec__row"><dt>Its text</dt><dd>Sent in sections to a Cloudflare Worker, then to a GPU on Modal (may run in the US) and, for Ask, to Workers AI. Processed in memory and not stored. Modal doesn't store the requests this app sends, and Cloudflare doesn't train on them.</dd></div>
+          <div class="ak-spec__row"><dt>Logs</dt><dd>One line per request: timings, counts, lengths and a keyed fingerprint. Never the text or your questions.</dd></div>
+          <div class="ak-spec__row"><dt>Your IP</dt><dd>Turned into a pseudonymous id, salted afresh each day, to enforce a fair daily quota. Deleted after the day.</dd></div>
+          <div class="ak-spec__row"><dt>Tip</dt><dd>Remove personal details before scanning a real contract.</dd></div>
+        </dl>
+      </div>
+
+      <div class="reveal">
+        <h3 class="ak-label how__h">Cost and limits</h3>
+        <p class="ak-meta how__p">GPU spend is capped at $0.27 a day (about $10 a month). When it runs out, live scanning pauses until midnight UTC and the demos keep working. Scans are fast once the model is warm. The first scan after a quiet spell waits about 30 seconds for the GPU to start.</p>
+        <p class="ak-meta how__p">The model has only been measured on CUAD: US commercial contracts filed with the SEC. Leases, employment contracts and non-US law are untested. Highlights can be wrong or missing.</p>
+      </div>
+    </div>
+  </section>
 </main>
-<ak-footer site="contracts"></ak-footer>
+
+<ak-footer site="contracts">
+  <p>Model: <a class="ak-link" href="https://huggingface.co/Qwen/Qwen3.5-2B">Qwen3.5-2B</a> (Apache-2.0), fine-tuned with LoRA. Data: <a class="ak-link" href="https://www.atticusprojectai.org/cuad">CUAD v1</a> by The Atticus Project (CC BY 4.0), Hendrycks et al., NeurIPS 2021.</p>
+  <p>Source code: <a class="ak-link" href="https://github.com/thearshkumar/contract-scanner">github.com/thearshkumar/contract-scanner</a> (MIT). Not legal advice.</p>
+</ak-footer>
 <script type="module" src="/client/main.ts"></script>
 </body>
 </html>

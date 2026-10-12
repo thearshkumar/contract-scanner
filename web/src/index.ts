@@ -40,8 +40,10 @@ export async function handle(request: Request, env: Env, deps: Deps): Promise<Re
   // Health is not logged: page loads and uptime checks would otherwise spend the free log allowance.
   if (url.pathname === "/api/health") {
     const s = await deps.budget.status(day);
-    const live = Boolean(env.MODAL_SCAN_URL) && s.usdMicros < Number(env.DAILY_USD_MICROS);
-    return json({ ok: true, live, resetsAt: resetsAt(), scanner: "Qwen3.5-2B + LoRA r8 (CUAD)", qa: env.QA_MODEL_ID });
+    const configured = Boolean(env.MODAL_SCAN_URL && env.MODAL_KEY && env.MODAL_SECRET);
+    const live = configured && s.usdMicros < Number(env.DAILY_USD_MICROS);
+    const reason = !configured ? "offline" : live ? null : "daily";
+    return json({ ok: true, live, reason, resetsAt: resetsAt(), scanner: "Qwen3.5-2B + LoRA r8 (CUAD)", qa: env.QA_MODEL_ID });
   }
 
   const log = new RequestLog(url.pathname, request.headers.get("cf-ray") ?? undefined, console.log, env.LOG_SALT);
@@ -59,6 +61,7 @@ export async function handle(request: Request, env: Env, deps: Deps): Promise<Re
       visitor: await visitorFor(env, request, day),
       log,
       scaledownMs: Number(env.MODAL_SCALEDOWN_SECS) * 1000,
+      scannerConfigured: deps.scannerConfigured ?? Boolean(env.MODAL_SCAN_URL && env.MODAL_KEY && env.MODAL_SECRET),
     };
     const res = await route(request, ctx, env);
     status = res.status;

@@ -1,0 +1,9 @@
+# Security headers for the static client (Workers static assets: https://developers.cloudflare.com/workers/static-assets/headers/).
+# connect-src limits where the page can send data: this origin (the API) and arshkumar.com (the kit fetches its own
+# favicon). No other origin can receive contract text, even if a dependency tried.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://arshkumar.com 'wasm-unsafe-eval'; style-src 'self' https://arshkumar.com 'unsafe-inline'; font-src 'self' https://arshkumar.com; img-src 'self' data: blob: https://arshkumar.com; connect-src 'self' https://arshkumar.com; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
+  Cross-Origin-Opener-Policy: same-origin

@@ -8,6 +8,8 @@ export interface Deps {
   qa: LLMProvider;
   embedder: Embedder;
   library: ClauseLibrary;
+  /** Tests set this to exercise scans with a mock scanner; otherwise derived from env. */
+  scannerConfigured?: boolean;
   budget: {
     admitScan(day: string, visitor: string, nowMs: number, caps: Caps): Promise<Admission>;
     chargeGpu(day: string, visitor: string, startMs: number, endMs: number, scaledownMs: number, microsPerSec: number): Promise<number>;
@@ -24,6 +26,8 @@ export interface Ctx {
   visitor: string;
   log: RequestLog;
   scaledownMs: number;
+  /** False until MODAL_SCAN_URL and the proxy-auth secrets are set: scans are refused before touching the budget. */
+  scannerConfigured: boolean;
 }
 
 export class HttpError extends Error {
