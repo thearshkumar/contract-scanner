@@ -23,6 +23,8 @@
 | Warm, 1 section | 1.9 s; 12.6–12.7 s for sections with long outputs (~1k tokens at ~80 tok/s on one sequence) |
 | Output parse rate | 8/8 |
 | Log canary hits | **0** (8 kB of app logs searched) |
+| Live, through the Worker (contracts.arshkumar.com) | cold 19.8 s, warm 6.6 s; 7 clauses, 0 anchor misses; Worker log canary: 0 hits |
+| Metering check | the warm call was charged 1,876 µ$ = 6.6 s × 283.7 µ$/s (its interval overlapped the previous call's scale-down tail, so only new time was charged) |
 
 **Reading the cold starts.** The Modal logs show two kinds of cold start:
 - **Restore:** "Restoring Function from memory snapshot". About 30 s.
