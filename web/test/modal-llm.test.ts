@@ -38,6 +38,12 @@ describe("ModalLLM", () => {
     expect(calls).toHaveLength(1);
   });
 
+  it("calls the real global fetch without 'Illegal invocation' (default fetcher)", async () => {
+    // No network in tests: an unreachable URL must fail with a network error, not a TypeError from a bad `this`.
+    const err = await new ModalLLM("http://127.0.0.1:9", "k", "s").complete([{ role: "user", content: "x" }]).catch((e: Error) => e);
+    expect(String(err)).not.toMatch(/Illegal invocation/);
+  });
+
   it("retries a quick 5xx once", async () => {
     const { f, calls } = fakeFetch([() => new Response("busy", { status: 503 }), ok]);
     await new ModalLLM(URL_, "wk-1", "ws-1", f).complete([{ role: "user", content: "x" }]);

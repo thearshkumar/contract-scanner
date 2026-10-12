@@ -23,7 +23,8 @@ export class ModalLLM implements LLMProvider {
     private url: string,
     private key: string,
     private secret: string,
-    private fetcher: typeof fetch = fetch,
+    // Wrapped, not stored bare: calling the global fetch as `this.fetcher(...)` throws "Illegal invocation" in Workers.
+    private fetcher: typeof fetch = (input, init) => fetch(input, init),
   ) {}
 
   async complete(messages: ChatMessage[], opts: { maxTokens?: number; temperature?: number } = {}): Promise<LLMResult> {
