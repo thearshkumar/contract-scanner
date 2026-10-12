@@ -116,7 +116,7 @@ async function scanText(title: string, raw: string): Promise<void> {
   let stop: ApiError | null = null;
   let nextId = 0;
   const found: Found[] = [];
-  setStatus(`Waking the model… the first scan after a quiet spell takes about 30 seconds.`, 0.02);
+  setStatus(`Waking the model… the first scan after a quiet spell usually takes about 30 seconds, occasionally a few minutes.`, 0.02);
 
   const queue = [...c.chunks];
   async function worker(): Promise<void> {

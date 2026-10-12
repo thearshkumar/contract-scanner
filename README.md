@@ -79,7 +79,7 @@ Serving is capped at **$10/month**. Prices were checked 2026-10-12 against [Moda
 | 16 GiB memory | $0.00000222/GiB/s | $0.0000355 |
 | **Total** | | **$0.000284/s** (about $1.02/h) |
 
-**Daily cap: $0.27.** The Durable Object stops admitting scans once the day's spend reaches it. With `max_containers=1`, the overshoot is at most one 150 s request plus the 20 s scale-down, about $0.048 a day. So a 31-day month costs at most 31 × (0.27 + 0.048) = **$9.86**.
+**Daily cap: $0.23.** The Durable Object stops admitting scans once the day's spend reaches it. With `max_containers=1`, the overshoot is at most one in-flight call (the Worker gives up after 300 s, which covers a full vLLM boot when Modal rebuilds the snapshot) plus the 20 s scale-down: 320 s × $0.000284 ≈ $0.091 a day. So a 31-day month costs at most 31 × (0.23 + 0.091) = **$9.95**.
 
 **How GPU time is metered.** The meter is the exact union of `[request start, request end + 20 s scale-down]` intervals. That union is the container's lifetime, and concurrent sections aren't counted twice.
 
