@@ -1,0 +1,127 @@
+{
+  "config": {
+    "name": "r8-v1",
+    "rank": 8,
+    "epochs": 2,
+    "lr": 0.0002,
+    "neg_keep": 0.35,
+    "max_len": 3072,
+    "batch_size": 4,
+    "grad_accum": 4,
+    "val_fraction": 0.05,
+    "seed": 0,
+    "base_repo": "Qwen/Qwen3.5-2B",
+    "base_revision": "15852e8c16360a2fea060d615a32b45270f8a8fc",
+    "gpu": "L40S",
+    "lora_alpha": 16,
+    "split": "cuad.split_of (sha256 of title, 20% test); val = 5% of train contracts by a second hash"
+  },
+  "data": {
+    "train_examples": 3243,
+    "val_examples": 268,
+    "dropped_too_long": 5,
+    "negatives_dropped": 1087,
+    "train_tokens": 5202184
+  },
+  "train_secs": 2628,
+  "optimizer_steps": 404,
+  "loss_curve": {
+    "train": [
+      {
+        "step": 20,
+        "loss": 0.3283
+      },
+      {
+        "step": 40,
+        "loss": 0.2147
+      },
+      {
+        "step": 60,
+        "loss": 0.185
+      },
+      {
+        "step": 80,
+        "loss": 0.1901
+      },
+      {
+        "step": 100,
+        "loss": 0.1688
+      },
+      {
+        "step": 120,
+        "loss": 0.1663
+      },
+      {
+        "step": 140,
+        "loss": 0.1588
+      },
+      {
+        "step": 160,
+        "loss": 0.149
+      },
+      {
+        "step": 180,
+        "loss": 0.1461
+      },
+      {
+        "step": 200,
+        "loss": 0.1465
+      },
+      {
+        "step": 220,
+        "loss": 0.1039
+      },
+      {
+        "step": 240,
+        "loss": 0.1165
+      },
+      {
+        "step": 260,
+        "loss": 0.1087
+      },
+      {
+        "step": 280,
+        "loss": 0.1072
+      },
+      {
+        "step": 300,
+        "loss": 0.102
+      },
+      {
+        "step": 320,
+        "loss": 0.1036
+      },
+      {
+        "step": 340,
+        "loss": 0.1113
+      },
+      {
+        "step": 360,
+        "loss": 0.1025
+      },
+      {
+        "step": 380,
+        "loss": 0.1125
+      },
+      {
+        "step": 400,
+        "loss": 0.1177
+      }
+    ],
+    "val": [
+      {
+        "step": 0,
+        "loss": 0.4611
+      },
+      {
+        "step": 202,
+        "loss": 0.1439
+      },
+      {
+        "step": 404,
+        "loss": 0.1492
+      }
+    ]
+  },
+  "adapter_mb": 33.7
+}
